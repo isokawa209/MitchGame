@@ -279,6 +279,11 @@ float ARPGCharacterBase::GetMoveSpeed() const
 	return AttributeSet->GetMoveSpeed();
 }
 
+float ARPGCharacterBase::GetTest() const
+{
+	return AttributeSet->GetTest();
+}
+
 int32 ARPGCharacterBase::GetCharacterLevel() const
 {
 	return CharacterLevel;
@@ -410,5 +415,14 @@ void ARPGCharacterBase::HandleMoveSpeedChanged(float DeltaValue, const struct FG
 	if (bAbilitiesInitialized)
 	{
 		OnMoveSpeedChanged(DeltaValue, EventTags);
+	}
+}
+
+
+void ARPGCharacterBase::HandleTestChanged(float DeltaValue, const struct FGameplayTagContainer& EventTags)
+{
+	if (bAbilitiesInitialized)
+	{
+		OnTestChanged(DeltaValue, EventTags);
 	}
 }

@@ -51,6 +51,10 @@ public:
 	UFUNCTION(BlueprintCallable)
 	virtual float GetMoveSpeed() const;
 
+	/** Returns current movement speed */
+	UFUNCTION(BlueprintCallable)
+	virtual float GetTest() const;
+
 	/** Returns the character level that is passed to the ability system */
 	UFUNCTION(BlueprintCallable)
 	virtual int32 GetCharacterLevel() const;
@@ -168,6 +172,10 @@ protected:
 	UFUNCTION(BlueprintImplementableEvent)
 	void OnMoveSpeedChanged(float DeltaValue, const struct FGameplayTagContainer& EventTags);
 
+
+	UFUNCTION(BlueprintImplementableEvent)
+	void OnTestChanged(float DeltaValue, const struct FGameplayTagContainer& EventTags);
+
 	/** Called when slotted items change, bound to delegate on interface */
 	void OnItemSlotChanged(FRPGItemSlot ItemSlot, URPGItem* Item);
 	void RefreshSlottedGameplayAbilities();
@@ -192,6 +200,7 @@ protected:
 	virtual void HandleHealthChanged(float DeltaValue, const struct FGameplayTagContainer& EventTags);
 	virtual void HandleManaChanged(float DeltaValue, const struct FGameplayTagContainer& EventTags);
 	virtual void HandleMoveSpeedChanged(float DeltaValue, const struct FGameplayTagContainer& EventTags);
+	virtual void HandleTestChanged(float DeltaValue, const struct FGameplayTagContainer& EventTags);
 
 	// Friended to allow access to handle functions above
 	friend URPGAttributeSet;

@@ -67,6 +67,11 @@ public:
 	FGameplayAttributeData Damage;
 	ATTRIBUTE_ACCESSORS(URPGAttributeSet, Damage)
 
+	/** MoveSpeed affects how fast characters can move */
+	UPROPERTY(BlueprintReadOnly, Category = "Test", ReplicatedUsing = OnRep_Test)
+	FGameplayAttributeData Test;
+	ATTRIBUTE_ACCESSORS(URPGAttributeSet, Test)
+
 protected:
 	/** Helper function to proportionally adjust the value of an attribute when it's associated max attribute changes. (i.e. When MaxHealth increases, Health increases by an amount that maintains the same percentage as before) */
 	void AdjustAttributeForMaxChange(FGameplayAttributeData& AffectedAttribute, const FGameplayAttributeData& MaxAttribute, float NewMaxValue, const FGameplayAttribute& AffectedAttributeProperty);
@@ -92,4 +97,7 @@ protected:
 
 	UFUNCTION()
 	virtual void OnRep_MoveSpeed(const FGameplayAttributeData& OldValue);
+
+	UFUNCTION()
+	virtual void OnRep_Test(const FGameplayAttributeData& OldValue);
 };

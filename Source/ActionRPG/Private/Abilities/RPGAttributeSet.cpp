@@ -15,6 +15,7 @@ URPGAttributeSet::URPGAttributeSet()
 	, DefensePower(1.0f)
 	, MoveSpeed(1.0f)
 	, Damage(0.0f)
+	, Test(1.0f)
 {
 }
 
@@ -29,6 +30,7 @@ void URPGAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Out
 	DOREPLIFETIME(URPGAttributeSet, AttackPower);
 	DOREPLIFETIME(URPGAttributeSet, DefensePower);
 	DOREPLIFETIME(URPGAttributeSet, MoveSpeed);
+	DOREPLIFETIME(URPGAttributeSet, Test);
 }
 
 void URPGAttributeSet::OnRep_Health(const FGameplayAttributeData& OldValue)
@@ -64,6 +66,11 @@ void URPGAttributeSet::OnRep_DefensePower(const FGameplayAttributeData& OldValue
 void URPGAttributeSet::OnRep_MoveSpeed(const FGameplayAttributeData& OldValue)
 {
 	GAMEPLAYATTRIBUTE_REPNOTIFY(URPGAttributeSet, MoveSpeed, OldValue);
+}
+
+void URPGAttributeSet::OnRep_Test(const FGameplayAttributeData& OldValue)
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(URPGAttributeSet, Test, OldValue);
 }
 
 void URPGAttributeSet::AdjustAttributeForMaxChange(FGameplayAttributeData& AffectedAttribute, const FGameplayAttributeData& MaxAttribute, float NewMaxValue, const FGameplayAttribute& AffectedAttributeProperty)
@@ -213,6 +220,14 @@ void URPGAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallbac
 		{
 			// Call for all movespeed changes
 			TargetCharacter->HandleMoveSpeedChanged(DeltaValue, SourceTags);
+		}
+	}
+	else if (Data.EvaluatedData.Attribute == GetTestAttribute())
+	{
+		if (TargetCharacter)
+		{
+			// Call for all movespeed changes
+			TargetCharacter->HandleTestChanged(DeltaValue, SourceTags);
 		}
 	}
 }
