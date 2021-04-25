@@ -102,14 +102,16 @@ void ARPGCharacterBase::RefreshSlottedGameplayAbilities()
 	}
 }
 
-void ARPGCharacterBase::FillSlottedAbilitySpecs(TMap<FRPGItemSlot, FGameplayAbilitySpec>& SlottedAbilitySpecs)
+void ARPGCharacterBase::FillSlottedAbilitySpecs(TMap<FRPGItemSlot, FSpecStruct>& SlottedAbilitySpecs)
 {
+	FSpecStruct SpecStruct;
 	// First add default ones
 	for (const TPair<FRPGItemSlot, TSubclassOf<URPGGameplayAbility>>& DefaultPair : DefaultSlottedAbilities)
 	{
 		if (DefaultPair.Value.Get())
 		{
-			SlottedAbilitySpecs.Add(DefaultPair.Key, FGameplayAbilitySpec(DefaultPair.Value, GetCharacterLevel(), INDEX_NONE, this));
+			SpecStruct.SpecArray.Add(FGameplayAbilitySpec(DefaultPair.Value, GetCharacterLevel(), INDEX_NONE, this));
+			SlottedAbilitySpecs.Add(DefaultPair.Key, SpecStruct);
 		}
 	}
 
@@ -125,16 +127,28 @@ void ARPGCharacterBase::FillSlottedAbilitySpecs(TMap<FRPGItemSlot, FGameplayAbil
 			// Use the character level as default
 			int32 AbilityLevel = GetCharacterLevel();
 
-			if (SlottedItem && SlottedItem->ItemType.GetName() == FName(TEXT("Weapon")))
+			if (SlottedItem)
 			{
-				// Override the ability level to use the data from the slotted item
-				AbilityLevel = SlottedItem->AbilityLevel;
-			}
+				SpecStruct.SpecArray.Empty();
+				for (auto& AbilityStruct : SlottedItem->Abilites) {
+					
 
-			if (SlottedItem && SlottedItem->GrantedAbility)
-			{
-				// This will override anything from default
-				SlottedAbilitySpecs.Add(ItemPair.Key, FGameplayAbilitySpec(SlottedItem->GrantedAbility, AbilityLevel, INDEX_NONE, SlottedItem));
+					if (SlottedItem && SlottedItem->ItemType.GetName() == FName(TEXT("Weapon")))
+					{
+						// Override the ability level to use the data from the slotted item
+						AbilityLevel = AbilityStruct.AbilityLevel;
+					}
+
+					if (SlottedItem && AbilityStruct.GrantedAbility)
+					{
+						SpecStruct.SpecArray.Add(FGameplayAbilitySpec(AbilityStruct.GrantedAbility, AbilityLevel, INDEX_NONE, SlottedItem));
+
+					}
+
+				}
+				if (SpecStruct.SpecArray.IsValidIndex(0))
+					// This will override anything from default
+					SlottedAbilitySpecs.Add(ItemPair.Key, SpecStruct);
 			}
 		}
 	}
@@ -142,24 +156,31 @@ void ARPGCharacterBase::FillSlottedAbilitySpecs(TMap<FRPGItemSlot, FGameplayAbil
 
 void ARPGCharacterBase::AddSlottedGameplayAbilities()
 {
-	TMap<FRPGItemSlot, FGameplayAbilitySpec> SlottedAbilitySpecs;
+	TMap<FRPGItemSlot, FSpecStruct> SlottedAbilitySpecs;
 	FillSlottedAbilitySpecs(SlottedAbilitySpecs);
 	
+	TArray<FGameplayAbilitySpecHandle> HandleArray;
 	// Now add abilities if needed
-	for (const TPair<FRPGItemSlot, FGameplayAbilitySpec>& SpecPair : SlottedAbilitySpecs)
+	for (const TPair<FRPGItemSlot, FSpecStruct>& SpecPair : SlottedAbilitySpecs)
 	{
-		FGameplayAbilitySpecHandle& SpecHandle = SlottedAbilities.FindOrAdd(SpecPair.Key);
+		HandleArray.Empty();
+		FHandleStruct SpecHandle = SlottedAbilities.FindOrAdd(SpecPair.Key);
 
-		if (!SpecHandle.IsValid())
+		if (!SpecHandle.HandleArray.IsValidIndex(0))
 		{
-			SpecHandle = AbilitySystemComponent->GiveAbility(SpecPair.Value);
+			for (auto& Array : SpecPair.Value.SpecArray) {
+
+
+				SpecHandle.HandleArray.Add(AbilitySystemComponent->GiveAbility(Array));
+			}
+			SlottedAbilities.Add(SpecPair.Key, SpecHandle);
 		}
 	}
 }
 
 void ARPGCharacterBase::RemoveSlottedGameplayAbilities(bool bRemoveAll)
 {
-	TMap<FRPGItemSlot, FGameplayAbilitySpec> SlottedAbilitySpecs;
+	TMap<FRPGItemSlot, FSpecStruct> SlottedAbilitySpecs;
 
 	if (!bRemoveAll)
 	{
@@ -167,33 +188,39 @@ void ARPGCharacterBase::RemoveSlottedGameplayAbilities(bool bRemoveAll)
 		FillSlottedAbilitySpecs(SlottedAbilitySpecs);
 	}
 
-	for (TPair<FRPGItemSlot, FGameplayAbilitySpecHandle>& ExistingPair : SlottedAbilities)
+	for (TPair<FRPGItemSlot, FHandleStruct>& ExistingPair : SlottedAbilities)
 	{
-		FGameplayAbilitySpec* FoundSpec = AbilitySystemComponent->FindAbilitySpecFromHandle(ExistingPair.Value);
-		bool bShouldRemove = bRemoveAll || !FoundSpec;
-
-		if (!bShouldRemove)
+		for (auto& Array : ExistingPair.Value.HandleArray)
 		{
-			// Need to check desired ability specs, if we got here FoundSpec is valid
-			FGameplayAbilitySpec* DesiredSpec = SlottedAbilitySpecs.Find(ExistingPair.Key);
+			FGameplayAbilitySpec* FoundSpec = AbilitySystemComponent->FindAbilitySpecFromHandle(Array);
+			bool bShouldRemove = bRemoveAll || !FoundSpec;
 
-			if (!DesiredSpec || DesiredSpec->Ability != FoundSpec->Ability || DesiredSpec->SourceObject != FoundSpec->SourceObject)
+			if (!bShouldRemove)
 			{
-				bShouldRemove = true;
+				// Need to check desired ability specs, if we got here FoundSpec is valid
+				FSpecStruct FindSpecStruct(*SlottedAbilitySpecs.Find(ExistingPair.Key));
+
+				for (auto& DesiredSpec : FindSpecStruct.SpecArray) {
+					if (!&DesiredSpec || DesiredSpec.Ability != FoundSpec->Ability || DesiredSpec.SourceObject != FoundSpec->SourceObject)
+					{
+						bShouldRemove = true;
+					}
+				}
+			}
+
+			if (bShouldRemove)
+			{
+				if (FoundSpec)
+				{
+					// Need to remove registered ability
+					AbilitySystemComponent->ClearAbility(Array);
+				}
+
+				// Make sure handle is cleared even if ability wasn't found
+				Array = FGameplayAbilitySpecHandle();
 			}
 		}
 		
-		if (bShouldRemove)
-		{	
-			if (FoundSpec)
-			{
-				// Need to remove registered ability
-				AbilitySystemComponent->ClearAbility(ExistingPair.Value);
-			}
-
-			// Make sure handle is cleared even if ability wasn't found
-			ExistingPair.Value = FGameplayAbilitySpecHandle();
-		}
 	}
 }
 
@@ -303,21 +330,23 @@ bool ARPGCharacterBase::SetCharacterLevel(int32 NewLevel)
 	return false;
 }
 
-bool ARPGCharacterBase::ActivateAbilitiesWithItemSlot(FRPGItemSlot ItemSlot, bool bAllowRemoteActivation)
+bool ARPGCharacterBase::ActivateAbilitiesWithItemSlot(FRPGItemSlot ItemSlot, int32 ArrayIndex, bool bAllowRemoteActivation)
 {
-	FGameplayAbilitySpecHandle* FoundHandle = SlottedAbilities.Find(ItemSlot);
+	TArray<FGameplayAbilitySpecHandle> Array = SlottedAbilities.Find(ItemSlot)->HandleArray;
 
-	if (FoundHandle && AbilitySystemComponent)
+	FGameplayAbilitySpecHandle FoundHandle = Array[ArrayIndex];
+
+	if (FoundHandle.IsValid() && AbilitySystemComponent)
 	{
-		return AbilitySystemComponent->TryActivateAbility(*FoundHandle, bAllowRemoteActivation);
+		return AbilitySystemComponent->TryActivateAbility(FoundHandle, bAllowRemoteActivation);
 	}
 
 	return false;
 }
 
-void ARPGCharacterBase::GetActiveAbilitiesWithItemSlot(FRPGItemSlot ItemSlot, TArray<URPGGameplayAbility*>& ActiveAbilities)
+void ARPGCharacterBase::GetActiveAbilitiesWithItemSlot(FRPGItemSlot ItemSlot, TArray<URPGGameplayAbility*>& ActiveAbilities , int32 ArrayIndex)
 {
-	FGameplayAbilitySpecHandle* FoundHandle = SlottedAbilities.Find(ItemSlot);
+	FGameplayAbilitySpecHandle* FoundHandle = &SlottedAbilities.Find(ItemSlot)->HandleArray[ArrayIndex];
 
 	if (FoundHandle && AbilitySystemComponent)
 	{

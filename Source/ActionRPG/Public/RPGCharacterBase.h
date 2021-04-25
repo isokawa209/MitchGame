@@ -14,6 +14,31 @@
 class URPGGameplayAbility;
 class UGameplayEffect;
 
+USTRUCT(BlueprintType)
+struct FSpecStruct
+{
+	GENERATED_USTRUCT_BODY()
+
+
+	   
+		UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+		TArray<FGameplayAbilitySpec> SpecArray;
+
+};
+
+USTRUCT(BlueprintType)
+struct FHandleStruct
+{
+
+	GENERATED_USTRUCT_BODY()
+
+
+	   
+		UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+		TArray<FGameplayAbilitySpecHandle> HandleArray;
+
+};
+
 /** Base class for Character, Designed to be blueprinted */
 UCLASS()
 class ACTIONRPG_API ARPGCharacterBase : public ACharacter, public IAbilitySystemInterface
@@ -69,11 +94,11 @@ public:
 	 * If bAllowRemoteActivation is true, it will remotely activate local/server abilities, if false it will only try to locally activate the ability
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Abilities")
-	bool ActivateAbilitiesWithItemSlot(FRPGItemSlot ItemSlot, bool bAllowRemoteActivation = true);
+	bool ActivateAbilitiesWithItemSlot(FRPGItemSlot ItemSlot, int32 ArrayIndex ,bool bAllowRemoteActivation = true);
 
 	/** Returns a list of active abilities bound to the item slot. This only returns if the ability is currently running */
 	UFUNCTION(BlueprintCallable, Category = "Abilities")
-	void GetActiveAbilitiesWithItemSlot(FRPGItemSlot ItemSlot, TArray<URPGGameplayAbility*>& ActiveAbilities);
+	void GetActiveAbilitiesWithItemSlot(FRPGItemSlot ItemSlot, TArray<URPGGameplayAbility*>& ActiveAbilities, int32 ArrayIndex);
 
 	/**
 	 * Attempts to activate all abilities that match the specified tags
@@ -126,7 +151,7 @@ protected:
 
 	/** Map of slot to ability granted by that slot. I may refactor this later */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Inventory)
-	TMap<FRPGItemSlot, FGameplayAbilitySpecHandle> SlottedAbilities;
+	TMap<FRPGItemSlot, FHandleStruct> SlottedAbilities;
 
 	/** Delegate handles */
 	FDelegateHandle InventoryUpdateHandle;
@@ -190,7 +215,7 @@ protected:
 	void AddSlottedGameplayAbilities();
 
 	/** Fills in with ability specs, based on defaults and inventory */
-	void FillSlottedAbilitySpecs(TMap<FRPGItemSlot, FGameplayAbilitySpec>& SlottedAbilitySpecs);
+	void FillSlottedAbilitySpecs(TMap<FRPGItemSlot, FSpecStruct>& SlottedAbilitySpecs);
 
 	/** Remove slotted gameplay abilities, if force is false it only removes invalid ones */
 	void RemoveSlottedGameplayAbilities(bool bRemoveAll);
