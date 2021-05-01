@@ -22,19 +22,65 @@ bool ARPGPlayerControllerBase::AddInventoryItem(URPGItem* NewItem, int32 ItemCou
 	}
 
 	// Find current item data, which may be empty
-	FRPGItemData OldData;
+	TMap<int32, FInventoryStruct> OldData;
 	GetInventoryItemData(NewItem, OldData);
 
-	// Find modified data
-	FRPGItemData NewData = OldData;
-	NewData.UpdateItemData(FRPGItemData(ItemCount, ItemLevel), NewItem->MaxCount, NewItem->MaxLevel);
+	ARPGCharacterBase* OwningCharacter = Cast<ARPGCharacterBase>(GetCharacter());
+	int32 InventorySize = OwningCharacter->GetInventorySize();
 
-	if (OldData != NewData)
-	{
-		// If data changed, need to update storage and call callback
-		InventoryData.Add(NewItem, NewData);
-		NotifyInventoryItemChanged(true, NewItem);
-		bChanged = true;
+	// Find modified data
+	FRPGItemData NewData;
+	for (TPair<int32, FInventoryStruct> Struct : OldData) {
+		if (Struct.Key == INDEX_NONE)
+		{
+			if (InventoryData.Num() < InventorySize)
+			{
+
+				NewData = Struct.Value.ItemData;
+
+				NewData.UpdateItemData(FRPGItemData(ItemCount, ItemLevel), NewItem->MaxCount, NewItem->MaxLevel);
+
+				NewData.ItemCount = NewData.ItemCount + ItemCount;
+
+				InventoryData.Add(FInventoryStruct(NewItem, NewData));
+
+				NotifyInventoryItemChanged(true, NewItem);
+				bChanged = true;
+				break;
+			}
+			else
+			{
+				break;
+			}
+		}
+		else
+		{
+			NewData = InventoryData[Struct.Key].ItemData;
+
+			NewData.UpdateItemData(FRPGItemData(ItemCount, ItemLevel), NewItem->MaxCount, NewItem->MaxLevel);
+
+			if (NewData.ItemCount + ItemCount < NewItem->MaxCount)
+			{
+				NewData.ItemCount = NewData.ItemCount + ItemCount;
+
+				InventoryData[Struct.Key] = FInventoryStruct(NewItem, NewData);
+			}
+			else {
+				if (InventoryData.Num() < InventorySize)
+				{
+					InventoryData.Add(FInventoryStruct(NewItem, NewData));
+				}
+				else
+				{
+					break;
+				}
+			}
+			NotifyInventoryItemChanged(true, NewItem);
+			bChanged = true;
+			break;
+		}
+
+
 	}
 
 	if (bAutoSlot)
@@ -52,6 +98,82 @@ bool ARPGPlayerControllerBase::AddInventoryItem(URPGItem* NewItem, int32 ItemCou
 	return false;
 }
 
+bool ARPGPlayerControllerBase::SetInventoryItem(URPGItem* SetItem, bool& Result, int32 ItemCount, int32 ItemLevel, int32 ArrayIndex)
+{
+	bool bChanged = false;
+	ARPGCharacterBase* OwningCharacter = Cast<ARPGCharacterBase>(GetCharacter());
+	int32 InventorySize = OwningCharacter->GetInventorySize();
+
+	if (!InventoryData.IsValidIndex(ArrayIndex - 1))
+	{
+		if (InventoryData.Num() < InventorySize)
+		{
+			InventoryData.SetNum(ArrayIndex);
+			InventoryData[ArrayIndex - 1] = FInventoryStruct(SetItem, FRPGItemData(ItemCount, ItemLevel));
+			NotifyInventoryItemChanged(true, SetItem);
+			bChanged = true;
+			Result = true;
+		}
+		else
+		{
+			Result = false;
+		}
+
+	}
+	else 
+	{
+		FInventoryStruct OldData = InventoryData[ArrayIndex - 1];
+		if (SetItem == InventoryData[ArrayIndex - 1].Item)
+		{
+			
+			OldData.ItemData.UpdateItemData(FRPGItemData(ItemCount, ItemLevel), SetItem->MaxCount, SetItem->MaxLevel);
+			if (OldData.ItemData.ItemCount + ItemCount < SetItem->MaxCount)
+			{
+				OldData.ItemData.ItemCount = OldData.ItemData.ItemCount + ItemCount;
+
+				InventoryData[ArrayIndex - 1] = OldData;
+				Result = true;
+			}
+			else {
+				if (InventoryData.Num() < InventorySize)
+				{
+					InventoryData.Add(FInventoryStruct(SetItem, OldData.ItemData));
+					Result = true;
+				}
+				else
+				{
+					Result = false;
+				}
+			}
+			
+			
+		}
+		else {
+			if (InventoryData.Num() < InventorySize)
+			{
+				InventoryData.Add(FInventoryStruct(SetItem, OldData.ItemData));
+				Result = true;
+			}
+			else
+			{
+				Result = false;
+			}
+		}
+		NotifyInventoryItemChanged(true, SetItem);
+		bChanged = true;
+
+	}
+	
+	if (bChanged)
+	{
+		// If anything changed, write to save game
+		SaveInventory();
+		return true;
+	}
+	return false;
+
+}
+
 bool ARPGPlayerControllerBase::RemoveInventoryItem(URPGItem* RemovedItem, int32 RemoveCount)
 {
 	if (!RemovedItem)
@@ -60,9 +182,22 @@ bool ARPGPlayerControllerBase::RemoveInventoryItem(URPGItem* RemovedItem, int32 
 		return false;
 	}
 
+	TMap<int32, FInventoryStruct> ItemData;
 	// Find current item data, which may be empty
 	FRPGItemData NewData;
-	GetInventoryItemData(RemovedItem, NewData);
+	int32 Index = 0;
+	GetInventoryItemData(RemovedItem, ItemData);
+
+	int32 ItemCount = 0;
+	for (TPair<int32, FInventoryStruct>& Struct : ItemData)
+	{
+		if (ItemCount == 0 || ItemCount > Struct.Value.ItemData.ItemCount)
+		{
+			ItemCount = Struct.Value.ItemData.ItemCount;
+			NewData = Struct.Value.ItemData;
+			Index = Struct.Key;
+		}
+	}
 
 	if (!NewData.IsValid())
 	{
@@ -83,12 +218,12 @@ bool ARPGPlayerControllerBase::RemoveInventoryItem(URPGItem* RemovedItem, int32 
 	if (NewData.ItemCount > 0)
 	{
 		// Update data with new count
-		InventoryData.Add(RemovedItem, NewData);
+		InventoryData[Index] = FInventoryStruct(RemovedItem, NewData);
 	}
 	else
 	{
 		// Remove item entirely, make sure it is unslotted
-		InventoryData.Remove(RemovedItem);
+		InventoryData.RemoveAt(Index);
 
 		for (TPair<FRPGItemSlot, URPGItem*>& Pair : SlottedItems)
 		{
@@ -109,16 +244,16 @@ bool ARPGPlayerControllerBase::RemoveInventoryItem(URPGItem* RemovedItem, int32 
 
 void ARPGPlayerControllerBase::GetInventoryItems(TArray<URPGItem*>& Items, FPrimaryAssetType ItemType)
 {
-	for (const TPair<URPGItem*, FRPGItemData>& Pair : InventoryData)
+	for (const FInventoryStruct& Pair : InventoryData)
 	{
-		if (Pair.Key)
+		if (Pair.Item)
 		{
-			FPrimaryAssetId AssetId = Pair.Key->GetPrimaryAssetId();
+			FPrimaryAssetId AssetId = Pair.Item->GetPrimaryAssetId();
 
 			// Filters based on item type
 			if (AssetId.PrimaryAssetType == ItemType || !ItemType.IsValid())
 			{
-				Items.Add(Pair.Key);
+				Items.Add(Pair.Item);
 			}
 		}	
 	}
@@ -156,25 +291,30 @@ bool ARPGPlayerControllerBase::SetSlottedItem(FRPGItemSlot ItemSlot, URPGItem* I
 
 int32 ARPGPlayerControllerBase::GetInventoryItemCount(URPGItem* Item) const
 {
-	const FRPGItemData* FoundItem = InventoryData.Find(Item);
-
-	if (FoundItem)
+	int32 ReturnValue = 0;
+	for (FInventoryStruct Struct : InventoryData)
 	{
-		return FoundItem->ItemCount;
+		if (Struct.Item == Item) {
+			ReturnValue = ReturnValue + Struct.ItemData.ItemCount;
+		}
 	}
-	return 0;
+	return ReturnValue;
 }
 
-bool ARPGPlayerControllerBase::GetInventoryItemData(URPGItem* Item, FRPGItemData& ItemData) const
+bool ARPGPlayerControllerBase::GetInventoryItemData(URPGItem* Item, TMap<int32 , FInventoryStruct>& GetMap) const
 {
-	const FRPGItemData* FoundItem = InventoryData.Find(Item);
-
-	if (FoundItem)
+	for (int32 Index = 0 ; Index != InventoryData.Num() ; ++Index)
 	{
-		ItemData = *FoundItem;
+		if (Item == InventoryData[Index].Item )
+		{
+			GetMap.Add(Index , InventoryData[Index]);
+		}
+	}
+	if (GetMap.Find(0))
+	{
 		return true;
 	}
-	ItemData = FRPGItemData(0, 0);
+	GetMap.Add(INDEX_NONE , FInventoryStruct(Item ,FRPGItemData(0, 0)));
 	return false;
 }
 
@@ -203,9 +343,9 @@ void ARPGPlayerControllerBase::GetSlottedItems(TArray<URPGItem*>& Items, FPrimar
 void ARPGPlayerControllerBase::FillEmptySlots()
 {
 	bool bShouldSave = false;
-	for (const TPair<URPGItem*, FRPGItemData>& Pair : InventoryData)
+	for (const FInventoryStruct& Pair : InventoryData)
 	{
-		bShouldSave |= FillEmptySlotWithItem(Pair.Key);
+		bShouldSave |= FillEmptySlotWithItem(Pair.Item);
 	}
 
 	if (bShouldSave)
@@ -228,17 +368,17 @@ bool ARPGPlayerControllerBase::SaveInventory()
 	if (CurrentSaveGame)
 	{
 		// Reset cached data in save game before writing to it
-		CurrentSaveGame->InventoryData.Reset();
+		CurrentSaveGame->InventoryIdData.Reset();
 		CurrentSaveGame->SlottedItems.Reset();
 
-		for (const TPair<URPGItem*, FRPGItemData>& ItemPair : InventoryData)
+		for (const FInventoryStruct& ItemPair : InventoryData)
 		{
 			FPrimaryAssetId AssetId;
 
-			if (ItemPair.Key)
+			if (ItemPair.Item)
 			{
-				AssetId = ItemPair.Key->GetPrimaryAssetId();
-				CurrentSaveGame->InventoryData.Add(AssetId, ItemPair.Value);
+				AssetId = ItemPair.Item->GetPrimaryAssetId();
+				CurrentSaveGame->InventoryIdData.Add(FInventoryIdStruct(AssetId, ItemPair.ItemData));
 			}
 		}
 
@@ -294,13 +434,13 @@ bool ARPGPlayerControllerBase::LoadInventory()
 	{
 		// Copy from save game into controller data
 		bool bFoundAnySlots = false;
-		for (const TPair<FPrimaryAssetId, FRPGItemData>& ItemPair : CurrentSaveGame->InventoryData)
+		for (const FInventoryIdStruct& ItemPair : CurrentSaveGame->InventoryIdData)
 		{
-			URPGItem* LoadedItem = AssetManager.ForceLoadItem(ItemPair.Key);
+			URPGItem* LoadedItem = AssetManager.ForceLoadItem(ItemPair.ItemId);
 
 			if (LoadedItem != nullptr)
 			{
-				InventoryData.Add(LoadedItem, ItemPair.Value);
+				InventoryData.Add(FInventoryStruct(LoadedItem, ItemPair.ItemData));
 			}
 		}
 
@@ -341,7 +481,7 @@ bool ARPGPlayerControllerBase::FillEmptySlotWithItem(URPGItem* NewItem)
 	FRPGItemSlot EmptySlot;
 	for (TPair<FRPGItemSlot, URPGItem*>& Pair : SlottedItems)
 	{
-		if (Pair.Key.ItemType == NewItemType)
+		if (Pair.Key.ItemType == NewItemType && NewItemType.GetName() == FName(TEXT("Weapon")))
 		{
 			if (Pair.Value == NewItem)
 			{

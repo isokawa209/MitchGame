@@ -7,6 +7,7 @@
 #include "RPGInventoryInterface.h"
 #include "RPGPlayerControllerBase.generated.h"
 
+
 /** Base class for PlayerController, should be blueprinted */
 UCLASS()
 class ACTIONRPG_API ARPGPlayerControllerBase : public APlayerController, public IRPGInventoryInterface
@@ -20,7 +21,7 @@ public:
 
 	/** Map of all items owned by this player, from definition to data */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Inventory)
-	TMap<URPGItem*, FRPGItemData> InventoryData;
+	TArray<FInventoryStruct> InventoryData;
 
 	/** Map of slot, from type/num to item, initialized from ItemSlotsPerType on RPGGameInstanceBase */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Inventory)
@@ -59,6 +60,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = Inventory)
 	bool AddInventoryItem(URPGItem* NewItem, int32 ItemCount = 1, int32 ItemLevel = 1, bool bAutoSlot = true);
 
+	UFUNCTION(BlueprintCallable, Category = Inventory)
+	bool SetInventoryItem(URPGItem* SetItem, bool& Result, int32 ItemCount = 1, int32 ItemLevel = 1, int32 ArrayIndex = 0);
+
 	/** Remove an inventory item, will also remove from slots. A remove count of <= 0 means to remove all copies */
 	UFUNCTION(BlueprintCallable, Category = Inventory)
 	bool RemoveInventoryItem(URPGItem* RemovedItem, int32 RemoveCount = 1);
@@ -73,7 +77,7 @@ public:
 
 	/** Returns the item data associated with an item. Returns false if none found */
 	UFUNCTION(BlueprintPure, Category = Inventory)
-	bool GetInventoryItemData(URPGItem* Item, FRPGItemData& ItemData) const;
+	bool GetInventoryItemData(URPGItem* Item, TMap<int32, FInventoryStruct>& GetMap) const;
 
 	/** Sets slot to item, will remove from other slots if necessary. If passing null this will empty the slot */
 	UFUNCTION(BlueprintCallable, Category = Inventory)
@@ -100,7 +104,7 @@ public:
 	bool LoadInventory();
 
 	// Implement IRPGInventoryInterface
-	virtual const TMap<URPGItem*, FRPGItemData>& GetInventoryDataMap() const override
+	virtual const TArray<FInventoryStruct> GetInventoryDataMap() const override
 	{
 		return InventoryData;
 	}

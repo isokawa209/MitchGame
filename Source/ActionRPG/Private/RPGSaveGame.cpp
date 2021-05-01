@@ -14,7 +14,15 @@ void URPGSaveGame::Serialize(FArchive& Ar)
 			// Convert from list to item data map
 			for (const FPrimaryAssetId& ItemId : InventoryItems_DEPRECATED)
 			{
-				InventoryData.Add(ItemId, FRPGItemData(1, 1));
+				for (FInventoryIdStruct IdStruct : InventoryIdData) {
+
+					if (IdStruct.ItemId == ItemId)
+					{
+						InventoryIdData.Add(FInventoryIdStruct(ItemId, FRPGItemData(1, 1)));
+					}
+					
+				}
+								
 			}
 
 			InventoryItems_DEPRECATED.Empty();

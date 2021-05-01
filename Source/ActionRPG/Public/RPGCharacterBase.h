@@ -78,7 +78,7 @@ public:
 
 	/** Returns current movement speed */
 	UFUNCTION(BlueprintCallable)
-	virtual float GetTest() const;
+	virtual float GetInventorySize() const;
 
 	/** Returns the character level that is passed to the ability system */
 	UFUNCTION(BlueprintCallable)
@@ -99,6 +99,9 @@ public:
 	/** Returns a list of active abilities bound to the item slot. This only returns if the ability is currently running */
 	UFUNCTION(BlueprintCallable, Category = "Abilities")
 	void GetActiveAbilitiesWithItemSlot(FRPGItemSlot ItemSlot, TArray<URPGGameplayAbility*>& ActiveAbilities, int32 ArrayIndex);
+
+	UFUNCTION(BlueprintCallable, Category = "Abilities")
+		void GetAbilityHandles(URPGItem* Item, TArray<FGameplayEffectSpecHandle>& Handles);
 
 	/**
 	 * Attempts to activate all abilities that match the specified tags
@@ -199,7 +202,7 @@ protected:
 
 
 	UFUNCTION(BlueprintImplementableEvent)
-	void OnTestChanged(float DeltaValue, const struct FGameplayTagContainer& EventTags);
+	void OnInventorySizeChanged(float DeltaValue, const struct FGameplayTagContainer& EventTags);
 
 	/** Called when slotted items change, bound to delegate on interface */
 	void OnItemSlotChanged(FRPGItemSlot ItemSlot, URPGItem* Item);
@@ -225,7 +228,7 @@ protected:
 	virtual void HandleHealthChanged(float DeltaValue, const struct FGameplayTagContainer& EventTags);
 	virtual void HandleManaChanged(float DeltaValue, const struct FGameplayTagContainer& EventTags);
 	virtual void HandleMoveSpeedChanged(float DeltaValue, const struct FGameplayTagContainer& EventTags);
-	virtual void HandleTestChanged(float DeltaValue, const struct FGameplayTagContainer& EventTags);
+	virtual void HandleInventorySizeChanged(float DeltaValue, const struct FGameplayTagContainer& EventTags);
 
 	// Friended to allow access to handle functions above
 	friend URPGAttributeSet;

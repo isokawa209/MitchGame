@@ -120,9 +120,45 @@ struct ACTIONRPG_API FRPGItemData
 			MaxLevel = MAX_int32;
 		}
 
-		ItemCount = FMath::Clamp(ItemCount + Other.ItemCount, 1, MaxCount);
+		//ItemCount = FMath::Clamp(ItemCount + Other.ItemCount, 1, MaxCount);
 		ItemLevel = FMath::Clamp(Other.ItemLevel, 1, MaxLevel);
 	}
+};
+
+USTRUCT(BlueprintType)
+struct ACTIONRPG_API FInventoryStruct
+{
+	GENERATED_BODY()
+
+
+	FInventoryStruct()
+		:Item(nullptr),
+		ItemData()
+	{}
+
+
+	FInventoryStruct(URPGItem* item, FRPGItemData ItemData)
+		:Item(item),
+		ItemData(ItemData)
+	{}
+
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+		URPGItem* Item;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+		FRPGItemData ItemData;
+
+	/** Equality operators */
+	bool operator==(const FInventoryStruct& Other) const
+	{
+		return Item == Other.Item && ItemData == Other.ItemData;
+	}
+	bool operator!=(const FInventoryStruct& Other) const
+	{
+		return !(*this == Other);
+	}
+
 };
 
 

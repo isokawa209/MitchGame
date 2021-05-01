@@ -25,6 +25,38 @@ namespace ERPGSaveGameVersion
 	};
 }
 
+USTRUCT(BlueprintType)
+struct FInventoryIdStruct
+{
+	GENERATED_USTRUCT_BODY()
+
+		FInventoryIdStruct()
+		:ItemData()
+		{}
+
+		FInventoryIdStruct(FPrimaryAssetId ItemId, FRPGItemData ItemData)
+		:ItemId(ItemId),
+		ItemData(ItemData)
+		{}
+
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+		FPrimaryAssetId ItemId;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+		FRPGItemData ItemData;
+
+	bool operator==(const FInventoryIdStruct& Other) const
+	{
+		return ItemId == Other.ItemId && ItemData == Other.ItemData;
+	}
+	bool operator!=(const FInventoryIdStruct& Other) const
+	{
+		return !(*this == Other);
+	}
+
+};
+
 /** Object that is written to and read from the save game archive, with a data version */
 UCLASS(BlueprintType)
 class ACTIONRPG_API URPGSaveGame : public USaveGame
@@ -41,7 +73,7 @@ public:
 
 	/** Map of items to item data */
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = SaveGame)
-	TMap<FPrimaryAssetId, FRPGItemData> InventoryData;
+	TArray<FInventoryIdStruct> InventoryIdData;
 
 	/** Map of slotted items */
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = SaveGame)

@@ -102,6 +102,27 @@ void ARPGCharacterBase::RefreshSlottedGameplayAbilities()
 	}
 }
 
+void ARPGCharacterBase::GetAbilityHandles(URPGItem* Item, TArray<FGameplayEffectSpecHandle>& Handles)
+{
+	TArray<URPGGameplayAbility*> SpecArray;
+	FGameplayEffectContextHandle EffectContext = AbilitySystemComponent->MakeEffectContext();
+	EffectContext.AddSourceObject(this);
+	for (auto& Abilitys : Item->Abilites)
+	{
+		SpecArray.Add(Abilitys.GrantedAbility.GetDefaultObject());
+	}
+
+	for (auto& Specs : SpecArray) {
+		for (TPair<FGameplayTag, FRPGGameplayEffectContainer> Pair : Specs->EffectContainerMap) {
+			for (TSubclassOf<UGameplayEffect> Array : Pair.Value.TargetGameplayEffectClasses) {
+				FGameplayEffectSpecHandle NewHandle = AbilitySystemComponent->MakeOutgoingSpec(Array, GetCharacterLevel(), EffectContext);
+				Handles.Add(NewHandle);
+			}
+			
+		}
+	}
+}
+
 void ARPGCharacterBase::FillSlottedAbilitySpecs(TMap<FRPGItemSlot, FSpecStruct>& SlottedAbilitySpecs)
 {
 	FSpecStruct SpecStruct;
@@ -199,11 +220,15 @@ void ARPGCharacterBase::RemoveSlottedGameplayAbilities(bool bRemoveAll)
 			{
 				// Need to check desired ability specs, if we got here FoundSpec is valid
 				FSpecStruct FindSpecStruct(*SlottedAbilitySpecs.Find(ExistingPair.Key));
-
 				for (auto& DesiredSpec : FindSpecStruct.SpecArray) {
 					if (!&DesiredSpec || DesiredSpec.Ability != FoundSpec->Ability || DesiredSpec.SourceObject != FoundSpec->SourceObject)
 					{
 						bShouldRemove = true;
+					}
+					else
+					{
+						bShouldRemove = false;
+						break;
 					}
 				}
 			}
@@ -306,9 +331,9 @@ float ARPGCharacterBase::GetMoveSpeed() const
 	return AttributeSet->GetMoveSpeed();
 }
 
-float ARPGCharacterBase::GetTest() const
+float ARPGCharacterBase::GetInventorySize() const
 {
-	return AttributeSet->GetTest();
+	return AttributeSet->GetInventorySize();
 }
 
 int32 ARPGCharacterBase::GetCharacterLevel() const
@@ -448,10 +473,10 @@ void ARPGCharacterBase::HandleMoveSpeedChanged(float DeltaValue, const struct FG
 }
 
 
-void ARPGCharacterBase::HandleTestChanged(float DeltaValue, const struct FGameplayTagContainer& EventTags)
+void ARPGCharacterBase::HandleInventorySizeChanged(float DeltaValue, const struct FGameplayTagContainer& EventTags)
 {
 	if (bAbilitiesInitialized)
 	{
-		OnTestChanged(DeltaValue, EventTags);
+		OnInventorySizeChanged(DeltaValue, EventTags);
 	}
 }

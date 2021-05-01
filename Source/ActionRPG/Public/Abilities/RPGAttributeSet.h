@@ -68,9 +68,9 @@ public:
 	ATTRIBUTE_ACCESSORS(URPGAttributeSet, Damage)
 
 	/** MoveSpeed affects how fast characters can move */
-	UPROPERTY(BlueprintReadOnly, Category = "Test", ReplicatedUsing = OnRep_Test)
-	FGameplayAttributeData Test;
-	ATTRIBUTE_ACCESSORS(URPGAttributeSet, Test)
+	UPROPERTY(BlueprintReadOnly, Category = "InventorySize", ReplicatedUsing = OnRep_InventorySize)
+	FGameplayAttributeData InventorySize;
+	ATTRIBUTE_ACCESSORS(URPGAttributeSet, InventorySize)
 
 protected:
 	/** Helper function to proportionally adjust the value of an attribute when it's associated max attribute changes. (i.e. When MaxHealth increases, Health increases by an amount that maintains the same percentage as before) */
@@ -99,5 +99,5 @@ protected:
 	virtual void OnRep_MoveSpeed(const FGameplayAttributeData& OldValue);
 
 	UFUNCTION()
-	virtual void OnRep_Test(const FGameplayAttributeData& OldValue);
+	virtual void OnRep_InventorySize(const FGameplayAttributeData& OldValue);
 };

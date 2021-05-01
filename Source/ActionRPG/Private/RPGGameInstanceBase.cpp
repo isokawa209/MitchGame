@@ -16,16 +16,23 @@ void URPGGameInstanceBase::AddDefaultInventory(URPGSaveGame* SaveGame, bool bRem
 	// If we want to remove extra, clear out the existing inventory
 	if (bRemoveExtra)
 	{
-		SaveGame->InventoryData.Reset();
+		SaveGame->InventoryIdData.Reset();
 	}
 
 	// Now add the default inventory, this only adds if not already in hte inventory
 	for (const TPair<FPrimaryAssetId, FRPGItemData>& Pair : DefaultInventory)
 	{
-		if (!SaveGame->InventoryData.Contains(Pair.Key))
-		{
-			SaveGame->InventoryData.Add(Pair.Key, Pair.Value);
+		bool containsCheck = true;
+		for (FInventoryIdStruct IdStruct : SaveGame->InventoryIdData) {
+			if (IdStruct.ItemId == Pair.Key)
+			{
+				containsCheck = false;
+			}
 		}
+		if (containsCheck) {
+			SaveGame->InventoryIdData.Add(FInventoryIdStruct(Pair.Key, Pair.Value));
+		}
+		
 	}
 }
 
