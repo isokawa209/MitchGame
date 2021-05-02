@@ -357,13 +357,16 @@ bool ARPGCharacterBase::SetCharacterLevel(int32 NewLevel)
 
 bool ARPGCharacterBase::ActivateAbilitiesWithItemSlot(FRPGItemSlot ItemSlot, int32 ArrayIndex, bool bAllowRemoteActivation)
 {
-	TArray<FGameplayAbilitySpecHandle> Array = SlottedAbilities.Find(ItemSlot)->HandleArray;
-
-	FGameplayAbilitySpecHandle FoundHandle = Array[ArrayIndex];
-
-	if (FoundHandle.IsValid() && AbilitySystemComponent)
+		if (SlottedAbilities.Find(ItemSlot))
 	{
-		return AbilitySystemComponent->TryActivateAbility(FoundHandle, bAllowRemoteActivation);
+		TArray<FGameplayAbilitySpecHandle> Array = SlottedAbilities.Find(ItemSlot)->HandleArray;
+
+		FGameplayAbilitySpecHandle FoundHandle = Array[ArrayIndex];
+
+		if (FoundHandle.IsValid() && AbilitySystemComponent)
+		{
+			return AbilitySystemComponent->TryActivateAbility(FoundHandle, bAllowRemoteActivation);
+		}
 	}
 
 	return false;

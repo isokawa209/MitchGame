@@ -33,7 +33,7 @@ bool ARPGPlayerControllerBase::AddInventoryItem(URPGItem* NewItem, int32 ItemCou
 	for (TPair<int32, FInventoryStruct> Struct : OldData) {
 		if (Struct.Key == INDEX_NONE)
 		{
-			if (InventoryData.Num() < InventorySize)
+			if (InventoryData.Num() < InventorySize + 10)
 			{
 
 				NewData = Struct.Value.ItemData;
@@ -50,6 +50,15 @@ bool ARPGPlayerControllerBase::AddInventoryItem(URPGItem* NewItem, int32 ItemCou
 			}
 			else
 			{
+				for (int32 ArrayIndex = 10; ArrayIndex < InventoryData.Num(); ArrayIndex++) {
+					if (InventoryData[ArrayIndex].Item == nullptr)
+					{
+						InventoryData[ArrayIndex] = FInventoryStruct(NewItem, NewData);
+						NotifyInventoryItemChanged(true, NewItem);
+						bChanged = true;
+						break;
+					}
+				}
 				break;
 			}
 		}
@@ -65,13 +74,23 @@ bool ARPGPlayerControllerBase::AddInventoryItem(URPGItem* NewItem, int32 ItemCou
 
 				InventoryData[Struct.Key] = FInventoryStruct(NewItem, NewData);
 			}
-			else {
-				if (InventoryData.Num() < InventorySize)
+			else 
+			{
+				if (InventoryData.Num() < InventorySize + 10)
 				{
 					InventoryData.Add(FInventoryStruct(NewItem, NewData));
 				}
 				else
 				{
+					for (int32 ArrayIndex = 10; ArrayIndex < InventoryData.Num(); ArrayIndex++) {
+						if (InventoryData[ArrayIndex].Item == nullptr)
+						{
+							InventoryData[ArrayIndex] = FInventoryStruct(NewItem, NewData);
+							NotifyInventoryItemChanged(true, NewItem);
+							bChanged = true;
+							break;
+						}
+					}
 					break;
 				}
 			}
@@ -106,7 +125,7 @@ bool ARPGPlayerControllerBase::SetInventoryItem(URPGItem* SetItem, bool& Result,
 
 	if (!InventoryData.IsValidIndex(ArrayIndex - 1))
 	{
-		if (InventoryData.Num() < InventorySize)
+		if (InventoryData.Num() < InventorySize + 10)
 		{
 			InventoryData.SetNum(ArrayIndex);
 			InventoryData[ArrayIndex - 1] = FInventoryStruct(SetItem, FRPGItemData(ItemCount, ItemLevel));
@@ -135,7 +154,7 @@ bool ARPGPlayerControllerBase::SetInventoryItem(URPGItem* SetItem, bool& Result,
 				Result = true;
 			}
 			else {
-				if (InventoryData.Num() < InventorySize)
+				if (InventoryData.Num() < InventorySize + 10)
 				{
 					InventoryData.Add(FInventoryStruct(SetItem, OldData.ItemData));
 					Result = true;
@@ -149,7 +168,7 @@ bool ARPGPlayerControllerBase::SetInventoryItem(URPGItem* SetItem, bool& Result,
 			
 		}
 		else {
-			if (InventoryData.Num() < InventorySize)
+			if (InventoryData.Num() < InventorySize + 10)
 			{
 				InventoryData.Add(FInventoryStruct(SetItem, OldData.ItemData));
 				Result = true;
@@ -171,6 +190,65 @@ bool ARPGPlayerControllerBase::SetInventoryItem(URPGItem* SetItem, bool& Result,
 		return true;
 	}
 	return false;
+
+}
+
+void ARPGPlayerControllerBase::SortInventoryToSlotArea()
+{
+	UWorld* World = GetWorld();
+	URPGGameInstanceBase* GameInstance = World ? World->GetGameInstance<URPGGameInstanceBase>() : nullptr;
+
+
+	int32 WeaponIndex = *GameInstance->ItemSlotsPerType.Find(FName(TEXT("Weapon")));
+	int32 SkillIndex = *GameInstance->ItemSlotsPerType.Find(FName(TEXT("Skill")));
+	int32 PosionIndex = *GameInstance->ItemSlotsPerType.Find(FName(TEXT("Potion")));
+	
+	InventoryData.SetNum(10);
+
+	bool bChanged = false;
+
+	for (int32 index = 0; index < 10; index++)
+	{
+		if (InventoryData[index].Item != nullptr)
+		{
+
+			if (InventoryData[index].Item->ItemType.GetName() == FName(TEXT("Weapon")))
+			{
+
+				InventoryData.Swap(0, index);
+				bChanged = true;
+			}
+			else if (InventoryData[index].Item->ItemType.GetName() == FName(TEXT("Skill")))
+			{
+				for (int32 SIndex = WeaponIndex; SIndex < SkillIndex; SkillIndex++)
+				{
+					if (InventoryData[SIndex].Item == nullptr || InventoryData[SIndex].Item->ItemType.GetName() != FName(TEXT("Skill")))
+					{
+						InventoryData.Swap(SIndex, index);
+						bChanged = true;
+						break;
+					}
+				}
+			}
+			else if (InventoryData[index].Item->ItemType.GetName() == FName(TEXT("Potion")))
+			{
+				for (int32 PIndex = WeaponIndex + SkillIndex; PIndex < 9; PIndex++)
+				{
+					if (InventoryData[PIndex].Item == nullptr || InventoryData[PIndex].Item->ItemType.GetName() != FName(TEXT("Potion")))
+					{
+						InventoryData.Swap(PIndex, index);
+						bChanged = true;
+						break;
+					}
+				}
+			}
+
+		}
+	}
+	if (bChanged)
+	{
+		SaveInventory();
+	}
 
 }
 

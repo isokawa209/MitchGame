@@ -63,6 +63,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = Inventory)
 	bool SetInventoryItem(URPGItem* SetItem, bool& Result, int32 ItemCount = 1, int32 ItemLevel = 1, int32 ArrayIndex = 0);
 
+	UFUNCTION(BlueprintCallable, Category = Inventory)
+	void SortInventoryToSlotArea();
+
 	/** Remove an inventory item, will also remove from slots. A remove count of <= 0 means to remove all copies */
 	UFUNCTION(BlueprintCallable, Category = Inventory)
 	bool RemoveInventoryItem(URPGItem* RemovedItem, int32 RemoveCount = 1);
