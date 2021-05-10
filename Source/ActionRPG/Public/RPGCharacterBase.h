@@ -101,7 +101,7 @@ public:
 	void GetActiveAbilitiesWithItemSlot(FRPGItemSlot ItemSlot, TArray<URPGGameplayAbility*>& ActiveAbilities, int32 ArrayIndex);
 
 	UFUNCTION(BlueprintCallable, Category = "Abilities")
-		void GetAbilityHandles(URPGItem* Item, TArray<FGameplayEffectSpecHandle>& Handles);
+		void GetAbilityHandles(URPGItem* Item, TArray<TSubclassOf<UGameplayEffect>>& Handles);
 
 	/**
 	 * Attempts to activate all abilities that match the specified tags

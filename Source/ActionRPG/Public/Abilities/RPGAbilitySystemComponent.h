@@ -31,4 +31,10 @@ public:
 	/** Version of function in AbilitySystemGlobals that returns correct type */
 	static URPGAbilitySystemComponent* GetAbilitySystemComponentFromActor(const AActor* Actor, bool LookForComponent = false);
 
+	UFUNCTION(BlueprintCallable, Category = "Ability|GameplayEffect")
+	static float GetCalculationModifiedMagnitude(TArray<TSubclassOf<UGameplayEffect>> SpecHandle);
+
+	/** Helper function that may be useful to call from native as well */
+	static TArray<FGameplayEffectExecutionDefinition> GetCalculationModifiedMagnitude(const UGameplayEffect& Spec);
+
 };

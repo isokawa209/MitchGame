@@ -102,11 +102,9 @@ void ARPGCharacterBase::RefreshSlottedGameplayAbilities()
 	}
 }
 
-void ARPGCharacterBase::GetAbilityHandles(URPGItem* Item, TArray<FGameplayEffectSpecHandle>& Handles)
+void ARPGCharacterBase::GetAbilityHandles(URPGItem* Item, TArray<TSubclassOf<UGameplayEffect>>& Handles)
 {
 	TArray<URPGGameplayAbility*> SpecArray;
-	FGameplayEffectContextHandle EffectContext = AbilitySystemComponent->MakeEffectContext();
-	EffectContext.AddSourceObject(this);
 	for (auto& Abilitys : Item->Abilites)
 	{
 		SpecArray.Add(Abilitys.GrantedAbility.GetDefaultObject());
@@ -115,8 +113,7 @@ void ARPGCharacterBase::GetAbilityHandles(URPGItem* Item, TArray<FGameplayEffect
 	for (auto& Specs : SpecArray) {
 		for (TPair<FGameplayTag, FRPGGameplayEffectContainer> Pair : Specs->EffectContainerMap) {
 			for (TSubclassOf<UGameplayEffect> Array : Pair.Value.TargetGameplayEffectClasses) {
-				FGameplayEffectSpecHandle NewHandle = AbilitySystemComponent->MakeOutgoingSpec(Array, GetCharacterLevel(), EffectContext);
-				Handles.Add(NewHandle);
+				Handles.Add(Array);
 			}
 			
 		}
@@ -179,6 +176,8 @@ void ARPGCharacterBase::AddSlottedGameplayAbilities()
 {
 	TMap<FRPGItemSlot, FSpecStruct> SlottedAbilitySpecs;
 	FillSlottedAbilitySpecs(SlottedAbilitySpecs);
+
+	FGameplayAbilitySpecHandle NoneHandle;
 	
 	TArray<FGameplayAbilitySpecHandle> HandleArray;
 	// Now add abilities if needed
@@ -187,8 +186,9 @@ void ARPGCharacterBase::AddSlottedGameplayAbilities()
 		HandleArray.Empty();
 		FHandleStruct SpecHandle = SlottedAbilities.FindOrAdd(SpecPair.Key);
 
-		if (!SpecHandle.HandleArray.IsValidIndex(0))
+		if (!SpecHandle.HandleArray.IsValidIndex(0) || SpecHandle.HandleArray.Contains(NoneHandle))
 		{
+			SpecHandle.HandleArray.Empty();
 			for (auto& Array : SpecPair.Value.SpecArray) {
 
 
@@ -219,18 +219,26 @@ void ARPGCharacterBase::RemoveSlottedGameplayAbilities(bool bRemoveAll)
 			if (!bShouldRemove)
 			{
 				// Need to check desired ability specs, if we got here FoundSpec is valid
-				FSpecStruct FindSpecStruct(*SlottedAbilitySpecs.Find(ExistingPair.Key));
-				for (auto& DesiredSpec : FindSpecStruct.SpecArray) {
-					if (!&DesiredSpec || DesiredSpec.Ability != FoundSpec->Ability || DesiredSpec.SourceObject != FoundSpec->SourceObject)
-					{
-						bShouldRemove = true;
-					}
-					else
-					{
-						bShouldRemove = false;
-						break;
+				if (SlottedAbilitySpecs.Find(ExistingPair.Key))
+				{
+					FSpecStruct FindSpecStruct(*SlottedAbilitySpecs.Find(ExistingPair.Key));
+					for (auto& DesiredSpec : FindSpecStruct.SpecArray) {
+						if (!&DesiredSpec || DesiredSpec.Ability != FoundSpec->Ability || DesiredSpec.SourceObject != FoundSpec->SourceObject)
+						{
+							bShouldRemove = true;
+						}
+						else
+						{
+							bShouldRemove = false;
+							break;
+						}
 					}
 				}
+				else
+				{
+					bShouldRemove = true;
+				}
+
 			}
 
 			if (bShouldRemove)
@@ -240,9 +248,9 @@ void ARPGCharacterBase::RemoveSlottedGameplayAbilities(bool bRemoveAll)
 					// Need to remove registered ability
 					AbilitySystemComponent->ClearAbility(Array);
 				}
-
 				// Make sure handle is cleared even if ability wasn't found
 				Array = FGameplayAbilitySpecHandle();
+
 			}
 		}
 		

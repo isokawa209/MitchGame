@@ -74,6 +74,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = Inventory)
 	void GetInventoryItems(TArray<URPGItem*>& Items, FPrimaryAssetType ItemType);
 
+	UFUNCTION(BlueprintCallable, Category = Inventory)
+	bool SwapInventoryItem(int32 FromIndex, FInventoryStruct FromItem,int32 ToIndex, FInventoryStruct ToItem);
+
 	/** Returns number of instances of this item found in the inventory. This uses count from GetItemData */
 	UFUNCTION(BlueprintPure, Category = Inventory)
 	int32 GetInventoryItemCount(URPGItem* Item) const;

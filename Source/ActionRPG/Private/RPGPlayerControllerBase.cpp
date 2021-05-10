@@ -203,51 +203,55 @@ void ARPGPlayerControllerBase::SortInventoryToSlotArea()
 	int32 SkillIndex = *GameInstance->ItemSlotsPerType.Find(FName(TEXT("Skill")));
 	int32 PosionIndex = *GameInstance->ItemSlotsPerType.Find(FName(TEXT("Potion")));
 	
-	InventoryData.SetNum(10);
-
 	bool bChanged = false;
 
-	for (int32 index = 0; index < 10; index++)
+	TMap<int32, FInventoryStruct> FindMap;
+	int32 ItemCount;
+	int32 ItemIndex;
+
+	for (TPair<FRPGItemSlot, URPGItem* > Pair : SlottedItems)
 	{
-		if (InventoryData[index].Item != nullptr)
+		if (Pair.Value != nullptr)
 		{
 
-			if (InventoryData[index].Item->ItemType.GetName() == FName(TEXT("Weapon")))
+			GetInventoryItemData(Pair.Value, FindMap);
+			ItemCount = 0;
+			ItemIndex = 0;
+			for (TPair<int32, FInventoryStruct> findPair : FindMap)
 			{
 
-				InventoryData.Swap(0, index);
-				bChanged = true;
-			}
-			else if (InventoryData[index].Item->ItemType.GetName() == FName(TEXT("Skill")))
-			{
-				for (int32 SIndex = WeaponIndex; SIndex < SkillIndex; SkillIndex++)
+				if (ItemCount == 0 || ItemCount > findPair.Value.ItemData.ItemCount)
 				{
-					if (InventoryData[SIndex].Item == nullptr || InventoryData[SIndex].Item->ItemType.GetName() != FName(TEXT("Skill")))
-					{
-						InventoryData.Swap(SIndex, index);
-						bChanged = true;
-						break;
-					}
+					ItemCount = findPair.Value.ItemData.ItemCount;
+					ItemIndex = findPair.Key;
 				}
 			}
-			else if (InventoryData[index].Item->ItemType.GetName() == FName(TEXT("Potion")))
+			if (ItemIndex != 0)
 			{
-				for (int32 PIndex = WeaponIndex + SkillIndex; PIndex < 9; PIndex++)
+				if (Pair.Value->ItemType.GetName() == FName(TEXT("Weapon")))
 				{
-					if (InventoryData[PIndex].Item == nullptr || InventoryData[PIndex].Item->ItemType.GetName() != FName(TEXT("Potion")))
-					{
-						InventoryData.Swap(PIndex, index);
-						bChanged = true;
-						break;
-					}
+					InventoryData.Swap(0 + Pair.Key.SlotNumber, ItemIndex);
+					bChanged = true;
 				}
+				else if (Pair.Value->ItemType.GetName() == FName(TEXT("Skill")))
+				{
+					InventoryData.Swap(1 + Pair.Key.SlotNumber, ItemIndex);
+					bChanged = true;
+				}
+				else if (Pair.Value->ItemType.GetName() == FName(TEXT("Potion")))
+				{
+					InventoryData.Swap(6 + Pair.Key.SlotNumber, ItemIndex);
+					bChanged = true;
+				}
+				
 			}
-
+				
+			
 		}
-	}
-	if (bChanged)
-	{
-		SaveInventory();
+		if (bChanged)
+		{
+			SaveInventory();
+		}
 	}
 
 }
@@ -320,6 +324,20 @@ bool ARPGPlayerControllerBase::RemoveInventoryItem(URPGItem* RemovedItem, int32 
 	return true;
 }
 
+
+bool ARPGPlayerControllerBase::SwapInventoryItem(int32 FromIndex, FInventoryStruct FromItem, int32 ToIndex, FInventoryStruct ToItem)
+{
+	if (!InventoryData.IsValidIndex(ToIndex))
+	{
+		InventoryData.SetNum(ToIndex);
+	}
+	InventoryData.Swap(FromIndex, ToIndex-1);
+
+	SaveInventory();
+	return true;
+
+}
+
 void ARPGPlayerControllerBase::GetInventoryItems(TArray<URPGItem*>& Items, FPrimaryAssetType ItemType)
 {
 	for (const FInventoryStruct& Pair : InventoryData)
@@ -350,12 +368,12 @@ bool ARPGPlayerControllerBase::SetSlottedItem(FRPGItemSlot ItemSlot, URPGItem* I
 			Pair.Value = Item;
 			NotifySlottedItemChanged(Pair.Key, Pair.Value);
 		}
-		else if (Item != nullptr && Pair.Value == Item)
+		/*else if (Item != nullptr && Pair.Value == Item)
 		{
 			// If this item was found in another slot, remove it
 			Pair.Value = nullptr;
 			NotifySlottedItemChanged(Pair.Key, Pair.Value);
-		}
+		}*/
 	}
 
 	if (bFound)
@@ -423,7 +441,10 @@ void ARPGPlayerControllerBase::FillEmptySlots()
 	bool bShouldSave = false;
 	for (const FInventoryStruct& Pair : InventoryData)
 	{
-		bShouldSave |= FillEmptySlotWithItem(Pair.Item);
+		if (Pair.Item)
+		{
+			bShouldSave |= FillEmptySlotWithItem(Pair.Item);
+		}
 	}
 
 	if (bShouldSave)
@@ -457,6 +478,10 @@ bool ARPGPlayerControllerBase::SaveInventory()
 			{
 				AssetId = ItemPair.Item->GetPrimaryAssetId();
 				CurrentSaveGame->InventoryIdData.Add(FInventoryIdStruct(AssetId, ItemPair.ItemData));
+			}
+			else
+			{
+				CurrentSaveGame->InventoryIdData.Add(FInventoryIdStruct());
 			}
 		}
 
@@ -519,6 +544,10 @@ bool ARPGPlayerControllerBase::LoadInventory()
 			if (LoadedItem != nullptr)
 			{
 				InventoryData.Add(FInventoryStruct(LoadedItem, ItemPair.ItemData));
+			}
+			else
+			{
+				InventoryData.Add(FInventoryStruct());
 			}
 		}
 

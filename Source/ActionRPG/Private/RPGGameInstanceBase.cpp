@@ -17,6 +17,7 @@ void URPGGameInstanceBase::AddDefaultInventory(URPGSaveGame* SaveGame, bool bRem
 	if (bRemoveExtra)
 	{
 		SaveGame->InventoryIdData.Reset();
+		SaveGame->InventoryIdData.SetNum(10);
 	}
 
 	// Now add the default inventory, this only adds if not already in hte inventory

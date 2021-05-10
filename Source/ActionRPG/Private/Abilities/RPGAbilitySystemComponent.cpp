@@ -40,3 +40,29 @@ URPGAbilitySystemComponent* URPGAbilitySystemComponent::GetAbilitySystemComponen
 {
 	return Cast<URPGAbilitySystemComponent>(UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Actor, LookForComponent));
 }
+
+
+
+float URPGAbilitySystemComponent::GetCalculationModifiedMagnitude(TArray<TSubclassOf<UGameplayEffect>> SpecHandle)
+{
+	for (TSubclassOf<UGameplayEffect> Spec : SpecHandle)
+	{
+		if (Spec)
+		{
+			TArray<FGameplayEffectExecutionDefinition> Mod = GetCalculationModifiedMagnitude(*Spec.GetDefaultObject());
+		}
+	}
+
+	return 1;
+}
+
+TArray<FGameplayEffectExecutionDefinition> URPGAbilitySystemComponent::GetCalculationModifiedMagnitude(const UGameplayEffect& Spec)
+{
+	
+	TArray<FGameplayEffectExecutionDefinition> Mod = Spec.Executions;
+	FGameplayEffectSpec InRelevantSpec;
+	float OutCalculatedMagnitude;
+	Mod[0].CalculationModifiers[0].ModifierMagnitude.AttemptCalculateMagnitude(InRelevantSpec, OutCalculatedMagnitude);
+	
+	return Mod;
+}
