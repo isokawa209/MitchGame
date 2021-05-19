@@ -219,17 +219,21 @@ void ARPGPlayerControllerBase::SortInventoryToSlotArea()
 			ItemIndex = 0;
 			for (TPair<int32, FInventoryStruct> findPair : FindMap)
 			{
-
-				if (ItemCount == 0 || ItemCount > findPair.Value.ItemData.ItemCount)
+				if (findPair.Key != -1)
 				{
-					ItemCount = findPair.Value.ItemData.ItemCount;
-					ItemIndex = findPair.Key;
+					if (ItemCount == 0 || ItemCount > findPair.Value.ItemData.ItemCount)
+					{
+						ItemCount = findPair.Value.ItemData.ItemCount;
+						ItemIndex = findPair.Key;
+					}
 				}
 			}
 			if (ItemIndex != 0)
 			{
+				InventoryData.SetNum(ItemIndex + 1);
 				if (Pair.Value->ItemType.GetName() == FName(TEXT("Weapon")))
 				{
+					
 					InventoryData.Swap(0 + Pair.Key.SlotNumber, ItemIndex);
 					bChanged = true;
 				}
